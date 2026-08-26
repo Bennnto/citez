@@ -1,0 +1,142 @@
+import sys
+import subprocess
+from pathlib import Path
+
+# Add src directory to path
+SRC_DIR = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(SRC_DIR))
+
+import parse
+from semantic import Analyzer
+from backend_c import CodeGenerator
+from ir import (
+    HIRProgram, HIRAssign, HIRInt, HIRFloat, HIRString, HIRBool, HIRChar, HIRBinary, HIRName,
+    HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
+    HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass
+)
+
+def lower_to_hir(ast) -> HIRProgram:
+    hir_stmts = []
+    if hasattr(ast, "statements"):
+        for stmt in ast.statements:
+            lowered = lower_stmt(stmt)
+            if lowered:
+                hir_stmts.append(lowered)
+    return HIRProgram(statements=hir_stmts)
+
+def lower_stmt(stmt):
+    if stmt is None:
+        return None
+    name = type(stmt).__name__
+    if name == "Assign_Node":
+        t_name = stmt.type.name if stmt.type else None
+        target = lower_expr(stmt.ident) if hasattr(stmt, "ident") and not isinstance(stmt.ident, str) else stmt.ident
+        return HIRAssign(
+            ident=target,
+            type=t_name,
+            value=lower_expr(stmt.value) if stmt.value else None
+        )
+    elif name == "Array_Decl_Node":
+        t_name = stmt.type.name if stmt.type else "i32"
+        val = lower_expr(stmt.value) if stmt.value else None
+        return HIRArraydecl(ident=stmt.ident, type=t_name, size=stmt.size, value=val)
+    elif name == "Onscreen_Node":
+        return HIROnscreen(expr=lower_expr(stmt.expr))
+    elif name == "Scan_Node":
+        return HIRScan(expr=lower_expr(stmt.expr))
+    elif name == "If_Node":
+        return HIRIf(
+            cond=lower_expr(stmt.cond),
+            if_block=[lower_stmt(s) for s in stmt.if_block if s],
+            else_block=[lower_stmt(s) for s in stmt.else_block if s] if stmt.else_block else None
+        )
+    elif name == "While_Node":
+        return HIRWhile(
+            cond=lower_expr(stmt.cond),
+            body=[lower_stmt(s) for s in stmt.body if s]
+        )
+    elif name == "For_Node":
+        return HIRFor(
+            is_classic=stmt.is_classic,
+            init=lower_stmt(stmt.init) if stmt.init else None,
+            cond=lower_expr(stmt.cond) if stmt.cond else None,
+            increment=lower_stmt(stmt.increment) if stmt.increment else None,
+            range=lower_expr(stmt.range) if stmt.range else None,
+            body=[lower_stmt(s) for s in stmt.body if s]
+        )
+    elif name == "Procedure_Node":
+        ret_t = "void"
+        if hasattr(stmt, "return_type") and stmt.return_type:
+            ret_t = getattr(stmt.return_type, "name", "void")
+        return HIRProcedure(
+            ident=stmt.ident,
+            return_type=ret_t,
+            param=[lower_stmt(p) for p in stmt.param] if stmt.param else None,
+            body=[lower_stmt(s) for s in stmt.body if s]
+        )
+    elif name == "Return_Node":
+        return HIRReturn(value=lower_expr(stmt.value) if stmt.value else None)
+    elif name == "Break_Node":
+        return HIRBreak()
+    elif name == "Continue_Node":
+        return HIRContinue()
+    elif name == "Call_Node":
+        args = [lower_expr(a) for a in stmt.arguments] if stmt.arguments else []
+        return HIRCall(func=stmt.func, arguments=args)
+    elif name == "Pass_Node":
+        return HIRPass()
+    return stmt
+    
+
+def lower_expr(expr):
+    if expr is None:
+        return None
+    name = type(expr).__name__
+    if name == "Int_Node":
+        return HIRInt(value=expr.value, type_name="int")
+    elif name == "Float_Node":
+        return HIRFloat(value=expr.value, type_name="float")
+    elif name == "String_Node":
+        return HIRString(value=expr.value, type_name="str")
+    elif name == "Bool_Node":
+        return HIRBool(value=expr.value, type_name="bool")
+    elif name == "Char_Node":
+        return HIRChar(value=expr.value, type_name="char")
+    elif name == "Ident_Node":
+        return HIRName(name=expr.ident, type_name="int")
+    elif name == "Binaryops_Node":
+        return HIRBinary(
+            left=lower_expr(expr.left),
+            right=lower_expr(expr.right),
+            ops=expr.ops
+        )
+    elif name == "Array_Literal_Node":
+        return HIRArrayliteral(elements=[lower_expr(e) for e in expr.elements])
+    elif name == "Index_Node":
+        target = lower_expr(expr.target) if hasattr(expr, "target") and not isinstance(expr.target, str) else expr.target
+        return HIRIndex(target=target, index=lower_expr(expr.index))
+    return expr
+
+def run_pipeline(code_str: str, file_name: str) -> subprocess.CompletedProcess:
+    # 1. Parse AST
+    ast = parse.parser.parse(code_str)
+    assert ast is not None, "Failed to parse AST"
+
+    # 2. Semantic Check
+    analyzer = Analyzer()
+    analyzer.analyze(ast)
+
+    # 3. Lower AST to HIR
+    hir = lower_to_hir(ast)
+
+    # 4. Save to temporary .ctz file & Compile C code
+    tmp_file = Path("/tmp") / file_name
+    tmp_file.write_text(code_str)
+
+    compiler = CodeGenerator()
+    exe_path = compiler.Compile(str(tmp_file), hir)
+
+    # 5. Run compiled binary
+    proc = subprocess.run([str(exe_path)], capture_output=True, text=True)
+    assert proc.returncode == 0, f"Binary execution failed with code {proc.returncode}"
+    return proc

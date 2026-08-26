@@ -1,0 +1,33 @@
+*__pycache__
+.pytest_cache 
+gitignored file:
+.DS\_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+._*
+.VolumeIcon.icns
+_____
+python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+.env
+
+___
+SQL // DATABASE
+db.sqlite3
+\*.db
+media/
+.vscode/
+
+___
+Enviromnet
+.venv
+venv
+.env
