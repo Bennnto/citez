@@ -26,5 +26,26 @@ def test_struct_semantic():
     assert symbol.fields == {"x": Type_Name_Map["int"], "y": Type_Name_Map["int"]}
     print("✅ test_struct_semantic PASSED!")
 
+from helper import run_pipeline
+
+def test_struct_execution():
+    code = """
+    struct Point {
+        x: int,
+        y: int
+    }
+
+    var Point p;
+    set p.x = 42;
+    set p.y = 99;
+    onscreen(p.x);
+    onscreen(p.y);
+    """
+    proc = run_pipeline(code, "test_struct_exec.ctz")
+    output = proc.stdout.strip().split()
+    assert output == ["42", "99"], f"Expected ['42', '99'], got {output}"
+    print("✅ test_struct_execution PASSED!")
+
 if __name__ == "__main__":
     test_struct_semantic()
+    test_struct_execution()

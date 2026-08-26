@@ -90,7 +90,8 @@ def p_type(p):
             | BOOL_TYPE
             | INT_TYPE
             | CHAR_TYPE
-            | VOID'''
+            | VOID
+            | IDENT'''
     p[0] = Type_Node(name=p[1])
 
 # Assign and Set Statement
@@ -338,7 +339,7 @@ def p_field_list(p):
 
 def p_struct_decl_stmt(p):
     '''struct_decl_stmt : STRUCT IDENT LBRACE field_list RBRACE'''
-    p[0] = Struct_Decl_Node(ident=p[2], fields=p[4])
+    p[0] = Struct_Decl_Node(name=p[2], fields=p[4])
 
 def p_expression_struct_access(p):
     '''expression : expression DOT IDENT'''

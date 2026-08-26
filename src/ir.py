@@ -135,4 +135,23 @@ class HIRLambda(HIRStmt):
     return_type : str
     body : list[HIRStmt]
 
+@dataclass
+class HIRField(HIRNode):
+    name : str
+    type_name : str
+
+@dataclass
+class HIRStructDecl(HIRStmt):
+    name : str
+    fields : list[HIRField]
+
+@dataclass
+class HIRStructAccess(HIRExpr):
+    target : HIRExpr
+    field : str
+
+# Aliases for compatibility
+HIRStructdecl = HIRStructDecl
+HIRStructaccess = HIRStructAccess
+
     

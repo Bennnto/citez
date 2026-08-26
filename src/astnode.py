@@ -154,7 +154,7 @@ class Field_Node(Node):
 
 @dataclass
 class Struct_Decl_Node(Stmt_Node):
-    ident : str
+    name : str
     fields : List[Field_Node]
 
 @dataclass

@@ -28,7 +28,11 @@ from ir import (
     HIRCall,
     HIRPass,
     HIRLambda,
-    
+    HIRStructDecl,
+    HIRStructdecl,
+    HIRField,
+    HIRStructAccess,
+    HIRStructaccess,
 )
 
 TYPE_MAP = {
@@ -58,9 +62,9 @@ def c_type(type_name):
     if hasattr(type_name, "name"):
         type_name = type_name.name
     type_key = str(type_name).lower()
-    if type_key not in TYPE_MAP:
-        raise KeyError(f"Undefined HIR Type '{type_name}'")
-    return TYPE_MAP[type_key]
+    if type_key in TYPE_MAP:
+        return TYPE_MAP[type_key]
+    return str(type_name)
 
 
 class Codegenerate:
@@ -287,6 +291,21 @@ class Codegenerate:
         elif isinstance(node, HIRPass):
             self.emit_line("/* pass */")
 
+        elif isinstance(node, HIRStructdecl):
+            name = node.name
+            self.emit_line(f"typedef struct {name} {{")
+            self.indent += 1
+            if node.fields :
+                for f in node.fields:
+                    f_name = f.name if hasattr(f, "name") else str(f)
+                    t_value = getattr(f, "type_name", getattr(f, "type", "int"))
+                    f_type = c_type(t_value)
+                    self.emit_line(f"{f_type} {f_name};")
+            self.indent -= 1
+            self.emit_line(f"}} {name};")
+
+    
+
     def emit_expr(self, node) -> str:
         if isinstance(node, HIRName):
             return node.name
@@ -324,6 +343,17 @@ class Codegenerate:
                 return (f"{func_name}({args});")
             else:
                 return (f"{func_name}();")
+
+        elif isinstance(node, HIRField):
+            name = node.name
+            c_t = c_type(node.type_name) if node.type_name else str(node.type_name)
+            return f"{c_t} {name};"
+
+        elif isinstance(node, HIRStructaccess):
+            target = self.emit_expr(node.target)
+            field = node.field
+            return f"{target}.{field}"
+
         return ""
     
 

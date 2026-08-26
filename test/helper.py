@@ -12,7 +12,8 @@ from backend_c import CodeGenerator
 from ir import (
     HIRProgram, HIRAssign, HIRInt, HIRFloat, HIRString, HIRBool, HIRChar, HIRBinary, HIRName,
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
-    HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass
+    HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
+    HIRStructDecl, HIRField, HIRStructAccess
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -85,6 +86,14 @@ def lower_stmt(stmt):
         return HIRCall(func=stmt.func, arguments=args)
     elif name == "Pass_Node":
         return HIRPass()
+    elif name == "Struct_Decl_Node":
+        s_name = getattr(stmt, "name", getattr(stmt, "ident", "struct"))
+        fields = []
+        if stmt.fields:
+            for f in stmt.fields:
+                t_name = getattr(f.type_name, "name", "int") if hasattr(f, "type_name") else "int"
+                fields.append(HIRField(name=f.name, type_name=t_name))
+        return HIRStructDecl(name=s_name, fields=fields)
     return stmt
     
 
@@ -115,6 +124,9 @@ def lower_expr(expr):
     elif name == "Index_Node":
         target = lower_expr(expr.target) if hasattr(expr, "target") and not isinstance(expr.target, str) else expr.target
         return HIRIndex(target=target, index=lower_expr(expr.index))
+    elif name == "Struct_Access_Node":
+        target = lower_expr(expr.target) if hasattr(expr, "target") and not isinstance(expr.target, str) else expr.target
+        return HIRStructAccess(target=target, field=expr.field)
     return expr
 
 def run_pipeline(code_str: str, file_name: str) -> subprocess.CompletedProcess:

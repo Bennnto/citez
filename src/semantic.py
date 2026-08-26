@@ -96,7 +96,7 @@ class Analyzer:
 
         # Check if it's a user declared struct in current scope 
         symbol = self.current_scope.resolve(node.name if hasattr(node, "name") else str(node))
-        if symbol and getattr(symbol, 'kind', None) == "struct":
+        if symbol and (getattr(symbol, 'type_kind', None) == "struct" or getattr(symbol, 'kind', None) == "struct"):
             return symbol.name
         
         raise SemanticError(f"Unknown type '{node.name if hasattr(node, 'name') else node}'")
@@ -360,12 +360,13 @@ class Analyzer:
             self.pop_scope()
 
     def visit_Struct_Decl_Node(self, node: Struct_Decl_Node):
-        struct_symbol = self.current_scope.declare(node.ident, "struct")
+        s_name = getattr(node, "name", getattr(node, "ident", "struct"))
+        struct_symbol = self.current_scope.declare(s_name, "struct")
         field_map = {}
         if node.fields:
             for field in node.fields:
                 if field.name in field_map:
-                    raise SemanticError(f"Duplicate field '{field.name}' in struct '{node.ident}'")
+                    raise SemanticError(f"Duplicate field '{field.name}' in struct '{s_name}'")
                 field_type = self.resolve_type(field.type_name)
                 field_map[field.name] = field_type
         struct_symbol.fields = field_map
