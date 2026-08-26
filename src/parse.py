@@ -43,7 +43,8 @@ def p_statement(p):
                  | onscreen_stmt
                  | call_stmt
                  | pass_stmt
-                 | lambda_stmt'''
+                 | lambda_stmt
+                 | struct_decl_stmt'''
 
     p[0] = p[1]
     
@@ -337,7 +338,7 @@ def p_field_list(p):
 
 def p_struct_decl_stmt(p):
     '''struct_decl_stmt : STRUCT IDENT LBRACE field_list RBRACE'''
-    p[0] = Struct_Decl_Node(name=p[2], fields=p[4])
+    p[0] = Struct_Decl_Node(ident=p[2], fields=p[4])
 
 def p_expression_struct_access(p):
     '''expression : expression DOT IDENT'''
