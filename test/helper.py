@@ -14,7 +14,7 @@ from ir import (
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
     HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
     HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref,
-    HIRTrap, HIRRaise
+    HIRTrap, HIRRaise, HIRBorrow, HIRDrop
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -31,7 +31,13 @@ def lower_stmt(stmt):
         return None
     name = type(stmt).__name__
     if name == "Assign_Node":
-        t_name = stmt.type.name if stmt.type else None
+        t_name = None
+        if stmt.type:
+            if type(stmt.type).__name__ == "Pointer_Type_Node":
+                base_n = getattr(stmt.type.base_type, "name", "int") if hasattr(stmt.type, "base_type") else "int"
+                t_name = f"{base_n}*"
+            else:
+                t_name = getattr(stmt.type, "name", None)
         target = lower_expr(stmt.ident) if hasattr(stmt, "ident") and not isinstance(stmt.ident, str) else stmt.ident
         return HIRAssign(
             ident=target,
@@ -107,6 +113,9 @@ def lower_stmt(stmt):
         )
     elif name == "Raise_Node":
         return HIRRaise(expr=lower_expr(stmt.expr) if stmt.expr else None)
+    elif name == "Drop_Node":
+        t_name = stmt.target if isinstance(stmt.target, str) else getattr(stmt.target, "ident", str(stmt.target))
+        return HIRDrop(target=t_name)
     return stmt
     
 
@@ -163,6 +172,8 @@ def lower_expr(expr):
         if expr.value is not None:
             return HIRArgument(name=expr.name, value=lower_expr(expr.value))
         return HIRArgument(name=expr.name, value=None)
+    elif name == "Borrow_Node":
+        return HIRBorrow(target=lower_expr(expr.target), is_rw=getattr(expr, "is_rw", False))
     return expr
 
 def run_pipeline(code_str: str, file_name: str) -> subprocess.CompletedProcess:

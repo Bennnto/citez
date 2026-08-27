@@ -37,6 +37,8 @@ from astnode import (
     Deref_Node,
     Trap_Node,
     Raise_Node,
+    Borrow_Node,
+    Drop_Node,
 )
 from dataclasses import asdict
 import json
@@ -78,7 +80,8 @@ def p_statement(p):
     | lambda_stmt
     | struct_decl_stmt
     | trap_stmt
-    | raise_stmt"""
+    | raise_stmt
+    | drop_stmt"""
 
     p[0] = p[1]
 
@@ -483,6 +486,21 @@ def p_raise_stmt(p):
         p[0] = Raise_Node(expr=p[2])
     else:
         p[0] = Raise_Node(expr=None)
+
+
+# Borrow & Drop
+def p_expression_borrow(p):
+    """expression : BORROW_RO expression
+    | BORROW_RW expression"""
+    if p[1] == 'ro':
+        p[0] = Borrow_Node(target=p[2], is_rw=False)
+    else:
+        p[0] = Borrow_Node(target=p[2], is_rw=True)
+
+
+def p_drop_stmt(p):
+    """drop_stmt : DROP IDENT optional_semicolon"""
+    p[0] = Drop_Node(target=p[2])
 
 
 # Helper

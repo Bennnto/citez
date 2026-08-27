@@ -29,7 +29,8 @@ tokens = (
     # Keywords
     'ASSIGN', 'SET', 'VAR', 'TRUE', 'FALSE', 'NEWLINE', 'IF', 'ELSE', 'WHILE', 'CONTINUE', 
     'BREAK', 'PROCEDURE', 'FOR', 'IN', 'RETURN', 'ONSCREEN', 'SCAN', 'ARRAY', 'PASS', 
-    'STRUCT', 'ADDRESS', 'TRAP', 'CATCH', 'ALWAYS', 'RAISE',
+    'STRUCT', 'ADDRESS', 'TRAP', 'CATCH', 'ALWAYS', 'RAISE', 'BORROW_RW', 'BORROW_RO', 
+    'DROP',
 )
 
 reserved = {
@@ -72,7 +73,10 @@ reserved = {
     'trap' : 'TRAP',
     'catch' : 'CATCH',
     'always' : 'ALWAYS',
-    'raise' : 'RAISE'
+    'raise' : 'RAISE',
+    'drop' : 'DROP',
+    'ro' : 'BORROW_RO',
+    'rw' : 'BORROW_RW',
 }
 
 

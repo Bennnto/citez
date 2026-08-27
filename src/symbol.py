@@ -49,12 +49,23 @@ TYPE_NAME_MAP = {
 }
     
 
+class SymbolState(Enum):
+    ACTIVE = auto()
+    BORROWED_RO = auto()
+    BORROWED_RW = auto()
+    DROPPED = auto()
+
+
 @dataclass
 class Symbol:
     name : str
     type_kind : TypeKind = TypeKind.STR
     storage: Storage = Storage.STACK
     
+    state: SymbolState = SymbolState.ACTIVE
+    ro_borrow_count: int = 0
+    rw_claimed: bool = False
+
     scope_depth: int = 0
     stack_offset: int | None = None
     captured_index: int | None = None

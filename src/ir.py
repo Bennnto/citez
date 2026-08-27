@@ -173,6 +173,15 @@ class HIRTrap(HIRStmt):
 class HIRRaise(HIRStmt):
     expr : Optional[HIRExpr] = None
 
+@dataclass
+class HIRBorrow(HIRExpr):
+    target : HIRExpr
+    is_rw : bool = False
+
+@dataclass
+class HIRDrop(HIRStmt):
+    target : str
+
 
 
 

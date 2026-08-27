@@ -36,6 +36,8 @@ from ir import (
     HIRDeref,
     HIRTrap,
     HIRRaise,
+    HIRBorrow,
+    HIRDrop,
 )
 
 TYPE_MAP = {
@@ -343,6 +345,9 @@ class Codegenerate:
                 self.emit_line('__citez_err_msg = "Error raised";')
             self.emit_line("longjmp(__citez_jmp_env, 1);")
 
+        elif isinstance(node, HIRDrop):
+            self.emit_line(f"/* drop {node.target} */")
+
     
 
     def emit_expr(self, node) -> str:
@@ -406,6 +411,10 @@ class Codegenerate:
         elif isinstance(node, HIRDeref):
             target = self.emit_expr(node.target)
             return f"*{target}"
+
+        elif isinstance(node, HIRBorrow):
+            target = self.emit_expr(node.target)
+            return f"&{target}"
 
 
         return ""

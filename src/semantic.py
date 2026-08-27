@@ -16,9 +16,10 @@ from astnode import (
     Field_Node, Struct_Access_Node,
     Pointer_Type_Node, Address_Node,
     Deref_Node, Trap_Node,
-    Raise_Node
+    Raise_Node, Borrow_Node,
+    Drop_Node,
 )
-from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol
+from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol, SymbolState
 
 @dataclass(frozen=True)
 class PointerType:
@@ -181,6 +182,8 @@ class Analyzer:
 
     def visit_Ident_Node(self, node: Ident_Node):
         symbol = self.current_scope.resolve(node.ident)
+        if symbol.state == SymbolState.DROPPED:
+            raise SemanticError(f"Use of dropped variable '{symbol.name}'")
         node.symbol = symbol
         node.inferred_type = symbol.type_kind
         return node.inferred_type
@@ -435,3 +438,40 @@ class Analyzer:
     def visit_Raise_Node(self, node: Raise_Node):
         if node.expr is not None:
             self.visit(node.expr)
+
+    def visit_Borrow_Node(self, node: Borrow_Node):
+        # Evaluate target expression & get target symbol
+        target_type = self.visit(node.target)
+        target_name = node.target.ident if isinstance(node.target, Ident_Node) else None
+        target_symbol = self.current_scope.resolve(target_name) if target_name else None
+
+        if target_symbol :
+            if target_symbol.state == SymbolState.DROPPED :
+                raise SemanticError(f"Cannot borrow dropped variable '{target_symbol.name}'")
+        
+            if node.is_rw :
+                if target_symbol.ro_borrow_count > 0 :
+                    raise SemanticError(f"Cannot borrow '{target_symbol.name}' as rw while ro borrow exist")
+                if target_symbol.rw_claimed :
+                    raise SemanticError(f"Cannot borrow '{target_symbol.name}' as rw more than once")
+
+                target_symbol.state = SymbolState.BORROWED_RW
+                target_symbol.rw_claimed = True
+            else:
+                if target_symbol.rw_claimed:
+                    raise SemanticError(f"Cannot borrow '{target_symbol.name}' as ro while rw borrow exists")
+
+                target_symbol.state = SymbolState.BORROWED_RO
+                target_symbol.ro_borrow_count += 1
+        node.inferred_type = PointerType(base_type =target_type)
+        return node.inferred_type 
+    
+    def visit_Drop_Node(self, node: Drop_Node):
+        target_name = node.target if isinstance(node.target, str) else getattr(node.target, "ident", str(node.target))
+        symbol = self.current_scope.resolve(target_name)
+        if symbol.state == SymbolState.DROPPED:
+            raise SemanticError(f"Variable '{symbol.name}' was already dropped")
+        if symbol.ro_borrow_count > 0 or symbol.rw_claimed:
+            raise SemanticError(f"Cannot drop '{symbol.name}' while active borrows exists")
+        symbol.state = SymbolState.DROPPED
+    
