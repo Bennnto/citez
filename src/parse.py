@@ -35,6 +35,8 @@ from astnode import (
     Pointer_Type_Node,
     Address_Node,
     Deref_Node,
+    Trap_Node,
+    Raise_Node,
 )
 from dataclasses import asdict
 import json
@@ -74,7 +76,9 @@ def p_statement(p):
     | call_stmt
     | pass_stmt
     | lambda_stmt
-    | struct_decl_stmt"""
+    | struct_decl_stmt
+    | trap_stmt
+    | raise_stmt"""
 
     p[0] = p[1]
 
@@ -457,6 +461,28 @@ def p_expression_address(p):
 def p_expression_deref(p):
     """expression : MUL IDENT %prec UMINUS"""
     p[0] = Deref_Node(target=p[2])
+
+
+# Trap, Catch, Always, Raise
+def p_trap_stmt(p):
+    """trap_stmt : TRAP LBRACE statements RBRACE CATCH IDENT LBRACE statements RBRACE
+    | TRAP LBRACE statements RBRACE CATCH IDENT LBRACE statements RBRACE ALWAYS LBRACE statements RBRACE
+    | TRAP LBRACE statements RBRACE ALWAYS LBRACE statements RBRACE"""
+    if len(p) == 10:
+        p[0] = Trap_Node(trap_block=p[3], catch_var=p[6], catch_block=p[8], always_block=None)
+    elif len(p) == 14:
+        p[0] = Trap_Node(trap_block=p[3], catch_var=p[6], catch_block=p[8], always_block=p[12])
+    else:
+        p[0] = Trap_Node(trap_block=p[3], catch_var=None, catch_block=None, always_block=p[7])
+
+
+def p_raise_stmt(p):
+    """raise_stmt : RAISE expression optional_semicolon
+    | RAISE optional_semicolon"""
+    if len(p) == 4:
+        p[0] = Raise_Node(expr=p[2])
+    else:
+        p[0] = Raise_Node(expr=None)
 
 
 # Helper

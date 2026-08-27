@@ -13,7 +13,8 @@ from ir import (
     HIRProgram, HIRAssign, HIRInt, HIRFloat, HIRString, HIRBool, HIRChar, HIRBinary, HIRName,
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
     HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
-    HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref
+    HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref,
+    HIRTrap, HIRRaise
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -94,6 +95,18 @@ def lower_stmt(stmt):
                 t_name = getattr(f.type_name, "name", "int") if hasattr(f, "type_name") else "int"
                 fields.append(HIRField(name=f.name, type_name=t_name))
         return HIRStructdecl(name=s_name, fields=fields)
+    elif name == "Trap_Node":
+        t_block = [lower_stmt(s) for s in stmt.trap_block if s] if stmt.trap_block else []
+        c_block = [lower_stmt(s) for s in stmt.catch_block if s] if stmt.catch_block else None
+        a_block = [lower_stmt(s) for s in stmt.always_block if s] if stmt.always_block else None
+        return HIRTrap(
+            trap_block=t_block,
+            catch_var=stmt.catch_var,
+            catch_block=c_block,
+            always_block=a_block
+        )
+    elif name == "Raise_Node":
+        return HIRRaise(expr=lower_expr(stmt.expr) if stmt.expr else None)
     return stmt
     
 
@@ -112,7 +125,17 @@ def lower_expr(expr):
     elif name == "Char_Node":
         return HIRChar(value=expr.value, type_name="char")
     elif name == "Ident_Node":
-        return HIRName(name=expr.ident, type_name="int")
+        t_name = "int"
+        inf_t = getattr(expr, "inferred_type", None)
+        if inf_t:
+            t_str = str(inf_t).lower()
+            if "str" in t_str:
+                t_name = "str"
+            elif "float" in t_str:
+                t_name = "float"
+            elif "char" in t_str:
+                t_name = "char"
+        return HIRName(name=expr.ident, type_name=t_name)
     elif name == "Binaryops_Node":
         return HIRBinary(
             left=lower_expr(expr.left),

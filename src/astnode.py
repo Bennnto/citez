@@ -173,3 +173,14 @@ class Address_Node(Expr_Node):
 @dataclass 
 class Deref_Node(Expr_Node):
     target : Expr_Node
+
+@dataclass
+class Trap_Node(Stmt_Node):
+    trap_block : List[Stmt_Node]
+    catch_var : Optional[str] = None
+    catch_block : Optional[List[Stmt_Node]] = None
+    always_block : Optional[List[Stmt_Node]] = None
+
+@dataclass
+class Raise_Node(Stmt_Node):
+    expr : Optional[Expr_Node] = None

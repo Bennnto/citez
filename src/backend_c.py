@@ -34,6 +34,8 @@ from ir import (
     HIRAddress,
     HIRPointertype,
     HIRDeref,
+    HIRTrap,
+    HIRRaise,
 )
 
 TYPE_MAP = {
@@ -108,6 +110,10 @@ class Codegenerate:
         self.emit_line("#include <stdint.h>")
         self.emit_line("#include <stddef.h>")
         self.emit_line("#include <math.h>")
+        self.emit_line("#include <setjmp.h>")
+        self.emit_line()
+        self.emit_line("static jmp_buf __citez_jmp_env;")
+        self.emit_line('static const char *__citez_err_msg = "";')
         
     def emit_main(self, statements):
         self.emit_line("int main(void) {")
@@ -305,6 +311,37 @@ class Codegenerate:
                     self.emit_line(f"{f_type} {f_name};")
             self.indent -= 1
             self.emit_line(f"}} {name};")
+
+        elif isinstance(node, HIRTrap):
+            self.emit_line("if (setjmp(__citez_jmp_env) == 0) {")
+            self.indent += 1
+            if node.trap_block:
+                for s in node.trap_block:
+                    self.emit_stmt(s)
+            self.indent -= 1
+            if node.catch_block:
+                self.emit_line("} else {")
+                self.indent += 1
+                c_var = node.catch_var if node.catch_var else "err"
+                self.emit_line(f"const char *{c_var} = __citez_err_msg;")
+                for s in node.catch_block:
+                    self.emit_stmt(s)
+                self.indent -= 1
+                self.emit_line("}")
+            else:
+                self.emit_line("}")
+
+            if node.always_block:
+                for s in node.always_block:
+                    self.emit_stmt(s)
+
+        elif isinstance(node, HIRRaise):
+            if node.expr is not None:
+                err_str = self.emit_expr(node.expr)
+                self.emit_line(f"__citez_err_msg = {err_str};")
+            else:
+                self.emit_line('__citez_err_msg = "Error raised";')
+            self.emit_line("longjmp(__citez_jmp_env, 1);")
 
     
 

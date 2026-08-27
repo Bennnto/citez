@@ -15,7 +15,8 @@ from astnode import (
     Lambda_Node, Struct_Decl_Node,
     Field_Node, Struct_Access_Node,
     Pointer_Type_Node, Address_Node,
-    Deref_Node
+    Deref_Node, Trap_Node,
+    Raise_Node
 )
 from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol
 
@@ -412,3 +413,25 @@ class Analyzer:
             raise SemanticError(f"Cannot dereference non-pointer type '{target_type}'")
         node.inferred_type = target_type.base_type
         return node.inferred_type
+
+    def visit_Trap_Node(self, node: Trap_Node):
+        if node.trap_block:
+            self.visit_block(node.trap_block)
+        if node.catch_block:
+            self.push_scope(kind="block")
+            try:
+                if node.catch_var:
+                    self.current_scope.declare(node.catch_var, Type_Name_Map["str"])
+                if isinstance(node.catch_block, list):
+                    for stmt in node.catch_block:
+                        self.visit(stmt)
+                else:
+                    self.visit(node.catch_block)
+            finally:
+                self.pop_scope()
+        if node.always_block:
+            self.visit_block(node.always_block)
+
+    def visit_Raise_Node(self, node: Raise_Node):
+        if node.expr is not None:
+            self.visit(node.expr)

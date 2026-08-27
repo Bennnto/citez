@@ -162,6 +162,17 @@ class HIRPointertype(HIRExpr):
 class HIRDeref(HIRExpr):
     target : HIRExpr 
 
+@dataclass
+class HIRTrap(HIRStmt):
+    trap_block : list[HIRStmt]
+    catch_var : Optional[str] = None
+    catch_block : Optional[list[HIRStmt]] = None
+    always_block : Optional[list[HIRStmt]] = None
+
+@dataclass
+class HIRRaise(HIRStmt):
+    expr : Optional[HIRExpr] = None
+
 
 
 
