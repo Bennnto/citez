@@ -13,5 +13,15 @@ def test_assign_syntax():
     proc = run_pipeline(code, "test_assign.ctz")
     print("✅ test_assign_syntax PASSED!")
 
+def test_pow_operator():
+    code = """
+    var int res = 2 ** 3;
+    onscreen(res);
+    """
+    proc = run_pipeline(code, "test_pow.ctz")
+    assert proc.stdout.strip() == "8"
+    print("✅ test_pow_operator PASSED!")
+
 if __name__ == "__main__":
     test_assign_syntax()
+    test_pow_operator()

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from astnode import ( 
     Type_Node, Assign_Node,
     String_Node, Bool_Node,
@@ -12,9 +13,18 @@ from astnode import (
     Index_Node, Array_Decl_Node,
     Call_Node, Argument_Node,
     Lambda_Node, Struct_Decl_Node,
-    Field_Node, Struct_Access_Node
+    Field_Node, Struct_Access_Node,
+    Pointer_Type_Node, Address_Node,
+    Deref_Node
 )
 from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol
+
+@dataclass(frozen=True)
+class PointerType:
+    base_type: any
+
+    def __str__(self):
+        return f"*{self.base_type}"
 
 INT_TYPES = {
     Type_Name_Map["int"], Type_Name_Map["i8"], Type_Name_Map["i16"],
@@ -86,9 +96,14 @@ class Analyzer:
             raise SemanticError(f"{context} expected type '{expected_type}', got '{actual_type}'")
         return actual_type
 
+    def is_lvalue(self, node) -> bool:
+        return isinstance(node, (Ident_Node, Index_Node, Struct_Access_Node, Deref_Node))
+
     def resolve_type(self, node: Type_Node):
         if not node:
             return Type_Name_Map["void"]
+        if isinstance(node, Pointer_Type_Node):
+            return PointerType(base_type=self.resolve_type(node.base_type))
         type_name = node.name.lower() if hasattr(node, "name") else str(node).lower()
         
         if type_name in Type_Name_Map:
@@ -104,6 +119,8 @@ class Analyzer:
     def is_assignable(self, expected, actual):
         if expected == actual:
             return True 
+        if isinstance(expected, PointerType) and isinstance(actual, PointerType):
+            return self.is_assignable(expected.base_type, actual.base_type)
         if expected in INT_TYPES and actual == Type_Name_Map["int"]:
             return True
         if expected in FLOAT_TYPES and actual in {Type_Name_Map["int"], Type_Name_Map["float"]}:
@@ -215,7 +232,7 @@ class Analyzer:
             node.inferred_type = str_type
             return node.inferred_type
 
-        if op in {"+", "-", "*", "/"}:
+        if op in {"+", "-", "*", "/", "**"}:
             if left in NUMERIC_TYPES and right in NUMERIC_TYPES:
                 node.inferred_type = Type_Name_Map["float"] if (left in FLOAT_TYPES or right in FLOAT_TYPES) else Type_Name_Map["int"]
                 return node.inferred_type
@@ -380,4 +397,18 @@ class Analyzer:
         if node.field not in struct_symbol.fields:
             raise SemanticError(f"Struct '{target_type}' has no field '{node.field}'")
         node.inferred_type = struct_symbol.fields[node.field]
+        return node.inferred_type
+
+    def visit_Address_Node(self, node: Address_Node):
+        if not self.is_lvalue(node.target):
+            raise SemanticError("Cannot take address of a non-lvalue expression")
+        target_type = self.visit(node.target)
+        node.inferred_type = PointerType(base_type=target_type)
+        return node.inferred_type
+
+    def visit_Deref_Node(self, node: Deref_Node):
+        target_type = self.visit(node.target)
+        if not isinstance(target_type, PointerType):
+            raise SemanticError(f"Cannot dereference non-pointer type '{target_type}'")
+        node.inferred_type = target_type.base_type
         return node.inferred_type

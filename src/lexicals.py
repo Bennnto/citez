@@ -29,7 +29,7 @@ tokens = (
     # Keywords
     'ASSIGN', 'SET', 'VAR', 'TRUE', 'FALSE', 'NEWLINE', 'IF', 'ELSE', 'WHILE', 'CONTINUE', 
     'BREAK', 'PROCEDURE', 'FOR', 'IN', 'RETURN', 'ONSCREEN', 'SCAN', 'ARRAY', 'PASS', 
-    'STRUCT'
+    'STRUCT', 'ADDRESS', 
 )
 
 reserved = {
@@ -104,6 +104,8 @@ t_ASSIGN = r'='
 t_GT = r'>'
 t_DOT = r'\.'
 t_ARROW = r'->'
+t_ADDRESS = r'\&'
+
 
 def t_IDENT(t):
     r'[a-zA-Z_][a-zA-Z0-9_]*'

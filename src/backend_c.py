@@ -28,11 +28,12 @@ from ir import (
     HIRCall,
     HIRPass,
     HIRLambda,
-    HIRStructDecl,
     HIRStructdecl,
     HIRField,
-    HIRStructAccess,
     HIRStructaccess,
+    HIRAddress,
+    HIRPointertype,
+    HIRDeref,
 )
 
 TYPE_MAP = {
@@ -106,6 +107,7 @@ class Codegenerate:
         self.emit_line("#include <stdbool.h>")
         self.emit_line("#include <stdint.h>")
         self.emit_line("#include <stddef.h>")
+        self.emit_line("#include <math.h>")
         
     def emit_main(self, statements):
         self.emit_line("int main(void) {")
@@ -322,6 +324,8 @@ class Codegenerate:
         elif isinstance(node, HIRBinary):
             left = self.emit_expr(node.left)
             right = self.emit_expr(node.right)
+            if node.ops == "**":
+                return f"pow({left}, {right})"
             return f"({left} {node.ops} {right})"
         elif isinstance(node, HIRArrayliteral):
             elems = [self.emit_expr(e) for e in node.elements]
@@ -340,9 +344,9 @@ class Codegenerate:
             if node.arguments:
                 arg_strs = [self.emit_expr(arg) for arg in node.arguments]
                 args = ", ".join(arg_strs)
-                return (f"{func_name}({args});")
+                return f"{func_name}({args})"
             else:
-                return (f"{func_name}();")
+                return f"{func_name}()"
 
         elif isinstance(node, HIRField):
             name = node.name
@@ -353,6 +357,19 @@ class Codegenerate:
             target = self.emit_expr(node.target)
             field = node.field
             return f"{target}.{field}"
+        
+        elif isinstance(node, HIRAddress):
+            target = self.emit_expr(node.target)
+            return f"&{target}"
+
+        elif isinstance(node, HIRPointertype):
+            base_type = c_type(node.base_type) if node.base_type else str(node.base_type)
+            return f"{base_type}*"
+        
+        elif isinstance(node, HIRDeref):
+            target = self.emit_expr(node.target)
+            return f"*{target}"
+
 
         return ""
     

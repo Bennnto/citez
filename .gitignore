@@ -31,3 +31,7 @@ Enviromnet
 .venv
 venv
 .env
+
+# PLY Parser generated files
+src/parsetab.py
+src/parser.out

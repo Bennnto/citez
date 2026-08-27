@@ -141,17 +141,28 @@ class HIRField(HIRNode):
     type_name : str
 
 @dataclass
-class HIRStructDecl(HIRStmt):
+class HIRStructdecl(HIRStmt):
     name : str
     fields : list[HIRField]
 
 @dataclass
-class HIRStructAccess(HIRExpr):
+class HIRStructaccess(HIRExpr):
     target : HIRExpr
     field : str
 
-# Aliases for compatibility
-HIRStructdecl = HIRStructDecl
-HIRStructaccess = HIRStructAccess
+@dataclass
+class HIRAddress(HIRExpr):
+    target: HIRExpr
+
+@dataclass
+class HIRPointertype(HIRExpr):
+    base_type : str
+
+@dataclass 
+class HIRDeref(HIRExpr):
+    target : HIRExpr 
+
+
+
 
     

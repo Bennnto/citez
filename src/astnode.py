@@ -161,3 +161,15 @@ class Struct_Decl_Node(Stmt_Node):
 class Struct_Access_Node(Expr_Node):
     target : Expr_Node
     field : str
+
+@dataclass 
+class Pointer_Type_Node(Node):
+    base_type : Type_Node
+
+@dataclass
+class Address_Node(Expr_Node):
+    target : Expr_Node
+
+@dataclass 
+class Deref_Node(Expr_Node):
+    target : Expr_Node

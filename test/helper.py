@@ -13,7 +13,7 @@ from ir import (
     HIRProgram, HIRAssign, HIRInt, HIRFloat, HIRString, HIRBool, HIRChar, HIRBinary, HIRName,
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
     HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
-    HIRStructDecl, HIRField, HIRStructAccess
+    HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -93,7 +93,7 @@ def lower_stmt(stmt):
             for f in stmt.fields:
                 t_name = getattr(f.type_name, "name", "int") if hasattr(f, "type_name") else "int"
                 fields.append(HIRField(name=f.name, type_name=t_name))
-        return HIRStructDecl(name=s_name, fields=fields)
+        return HIRStructdecl(name=s_name, fields=fields)
     return stmt
     
 
@@ -126,7 +126,20 @@ def lower_expr(expr):
         return HIRIndex(target=target, index=lower_expr(expr.index))
     elif name == "Struct_Access_Node":
         target = lower_expr(expr.target) if hasattr(expr, "target") and not isinstance(expr.target, str) else expr.target
-        return HIRStructAccess(target=target, field=expr.field)
+        return HIRStructaccess(target=target, field=expr.field)
+    elif name == "Address_Node":
+        return HIRAddress(target=lower_expr(expr.target))
+    elif name == "Deref_Node":
+        return HIRDeref(target=lower_expr(expr.target))
+    elif name == "Pointer_Type_Node":
+        return HIRPointertype(base_type=expr.base_type.name)
+    elif name == "Call_Node":
+        args = [lower_expr(a) for a in expr.arguments] if expr.arguments else []
+        return HIRCall(func=expr.func, arguments=args)
+    elif name == "Argument_Node":
+        if expr.value is not None:
+            return HIRArgument(name=expr.name, value=lower_expr(expr.value))
+        return HIRArgument(name=expr.name, value=None)
     return expr
 
 def run_pipeline(code_str: str, file_name: str) -> subprocess.CompletedProcess:

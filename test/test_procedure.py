@@ -9,8 +9,11 @@ def test_procedure_syntax():
     proc add(x: int, y: int): int {
         return x + y;
     }
+    var int result = add(10, 20);
+    onscreen(result);
     """
     proc = run_pipeline(code, "test_proc.ctz")
+    assert proc.stdout.strip() == "30"
     print("✅ test_procedure_syntax PASSED!")
 
 if __name__ == "__main__":

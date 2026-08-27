@@ -21,6 +21,23 @@ def test_if_else_statement():
     analyzer.analyze(ast)
     print("✅ test_if_else_statement passed!")
 
+def test_else_if_statement():
+    from helper import run_pipeline
+    code = """
+    var int x = 15;
+    if x > 20 {
+        onscreen(1);
+    } else if x > 10 {
+        onscreen(2);
+    } else {
+        onscreen(3);
+    }
+    """
+    proc = run_pipeline(code, "test_else_if.ctz")
+    assert proc.stdout.strip() == "2"
+    print("✅ test_else_if_statement passed!")
+
 if __name__ == "__main__":
     test_if_else_statement()
+    test_else_if_statement()
 
