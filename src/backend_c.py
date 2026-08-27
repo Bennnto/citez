@@ -40,6 +40,8 @@ from ir import (
     HIRDrop,
     HIRAlloc,
     HIRFree,
+    HIRFieldInit,
+    HIRStructLiteral,
 )
 
 TYPE_MAP = {
@@ -404,7 +406,13 @@ class Codegenerate:
         elif isinstance(node, HIRStructaccess):
             target = self.emit_expr(node.target)
             field = node.field
-            return f"{target}.{field}"
+            op = "->" if getattr(node, "is_arrow", False) else "."
+            return f"{target}{op}{field}"
+
+        elif isinstance(node, HIRStructLiteral):
+            inits = [f".{f.field} = {self.emit_expr(f.value)}" for f in node.fields] if node.fields else []
+            inits_str = ", ".join(inits)
+            return f"(struct {node.struct_name}){{ {inits_str} }}"
         
         elif isinstance(node, HIRAddress):
             target = self.emit_expr(node.target)

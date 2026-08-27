@@ -149,6 +149,17 @@ class HIRStructdecl(HIRStmt):
 class HIRStructaccess(HIRExpr):
     target : HIRExpr
     field : str
+    is_arrow : bool = False
+
+@dataclass
+class HIRFieldInit(HIRExpr):
+    field : str
+    value : HIRExpr
+
+@dataclass
+class HIRStructLiteral(HIRExpr):
+    struct_name : str
+    fields : list[HIRFieldInit]
 
 @dataclass
 class HIRAddress(HIRExpr):

@@ -14,7 +14,7 @@ from ir import (
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
     HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
     HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref,
-    HIRTrap, HIRRaise, HIRBorrow, HIRDrop, HIRAlloc, HIRFree
+    HIRTrap, HIRRaise, HIRBorrow, HIRDrop, HIRAlloc, HIRFree, HIRFieldInit, HIRStructLiteral
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -160,7 +160,10 @@ def lower_expr(expr):
         return HIRIndex(target=target, index=lower_expr(expr.index))
     elif name == "Struct_Access_Node":
         target = lower_expr(expr.target) if hasattr(expr, "target") and not isinstance(expr.target, str) else expr.target
-        return HIRStructaccess(target=target, field=expr.field)
+        return HIRStructaccess(target=target, field=expr.field, is_arrow=getattr(expr, "is_arrow", False))
+    elif name == "Struct_Literal_Node":
+        inits = [HIRFieldInit(field=f.field, value=lower_expr(f.value)) for f in expr.fields] if expr.fields else []
+        return HIRStructLiteral(struct_name=expr.struct_name, fields=inits)
     elif name == "Address_Node":
         return HIRAddress(target=lower_expr(expr.target))
     elif name == "Deref_Node":

@@ -41,6 +41,8 @@ from astnode import (
     Drop_Node,
     Alloc_Node,
     Free_Node,
+    Field_Init_Node,
+    Struct_Literal_Node,
 )
 from dataclasses import asdict
 import json
@@ -446,9 +448,35 @@ def p_struct_decl_stmt(p):
     p[0] = Struct_Decl_Node(name=p[2], fields=p[4])
 
 
+def p_field_init(p):
+    """field_init : IDENT COLON expression"""
+    p[0] = Field_Init_Node(field=p[1], value=p[3])
+
+
+def p_field_init_list(p):
+    """field_init_list : field_init
+    | field_init_list COMMA field_init
+    | empty"""
+    if len(p) == 2 and p[1] is not []:
+        p[0] = [p[1]]
+    elif len(p) == 4:
+        p[0] = p[1] + [p[3]]
+    else:
+        p[0] = []
+
+
+def p_expression_struct_literal(p):
+    """expression : IDENT LBRACE field_init_list RBRACE"""
+    p[0] = Struct_Literal_Node(struct_name=p[1], fields=p[3])
+
+
 def p_expression_struct_access(p):
-    """expression : expression DOT IDENT"""
-    p[0] = Struct_Access_Node(target=p[1], field=p[3])
+    """expression : expression DOT IDENT
+    | expression ARROW IDENT"""
+    if p[2] == '->':
+        p[0] = Struct_Access_Node(target=p[1], field=p[3], is_arrow=True)
+    else:
+        p[0] = Struct_Access_Node(target=p[1], field=p[3], is_arrow=False)
 
 
 # Pointer and Reference

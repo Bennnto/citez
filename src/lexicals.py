@@ -96,6 +96,7 @@ t_RBRACKET = r'\]'
 t_COMMA = r','
 
 t_POW = r'\*\*'
+t_ARROW = r'->'
 t_ADD = r'\+'
 t_SUB = r'-'
 t_MUL = r'\*'
@@ -113,7 +114,6 @@ t_LT = r'<'
 t_ASSIGN = r'='
 t_GT = r'>'
 t_DOT = r'\.'
-t_ARROW = r'->'
 t_ADDRESS = r'\&'
 
 

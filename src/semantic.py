@@ -18,7 +18,8 @@ from astnode import (
     Deref_Node, Trap_Node,
     Raise_Node, Borrow_Node,
     Drop_Node, Alloc_Node,
-    Free_Node
+    Free_Node, Field_Init_Node,
+    Struct_Literal_Node
 )
 from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol, SymbolState
 
@@ -405,12 +406,33 @@ class Analyzer:
 
     def visit_Struct_Access_Node(self, node: Struct_Access_Node):
         target_type = self.visit(node.target)
-        struct_symbol = self.current_scope.resolve(target_type)
+        if isinstance(target_type, PointerType):
+            target_type = target_type.base_type
+
+        struct_name = getattr(target_type, "name", str(target_type))
+        struct_symbol = self.current_scope.resolve(struct_name)
         if not hasattr(struct_symbol, "fields"):
-            raise SemanticError(f"Type '{target_type}' is not a struct")
+            raise SemanticError(f"Type '{struct_name}' is not a struct")
         if node.field not in struct_symbol.fields:
-            raise SemanticError(f"Struct '{target_type}' has no field '{node.field}'")
+            raise SemanticError(f"Struct '{struct_name}' has no field '{node.field}'")
         node.inferred_type = struct_symbol.fields[node.field]
+        return node.inferred_type
+
+    def visit_Struct_Literal_Node(self, node: Struct_Literal_Node):
+        struct_symbol = self.current_scope.resolve(node.struct_name)
+        if not hasattr(struct_symbol, "fields"):
+            raise SemanticError(f"'{node.struct_name}' is not a struct")
+
+        if node.fields:
+            for f_init in node.fields:
+                if f_init.field not in struct_symbol.fields:
+                    raise SemanticError(f"Struct '{node.struct_name}' has no field '{f_init.field}'")
+                val_type = self.visit(f_init.value)
+                expected_type = struct_symbol.fields[f_init.field]
+                if not self.is_assignable(expected_type, val_type):
+                    raise SemanticError(f"Cannot assign type '{val_type}' to field '{f_init.field}' of type '{expected_type}'")
+
+        node.inferred_type = self.resolve_type(node.struct_name)
         return node.inferred_type
 
     def visit_Address_Node(self, node: Address_Node):

@@ -161,6 +161,7 @@ class Struct_Decl_Node(Stmt_Node):
 class Struct_Access_Node(Expr_Node):
     target : Expr_Node
     field : str
+    is_arrow : bool = False
 
 @dataclass 
 class Pointer_Type_Node(Node):
@@ -208,3 +209,13 @@ class Alloc_Node(Expr_Node):
 @dataclass
 class Free_Node(Stmt_Node):
     target : Expr_Node
+
+@dataclass
+class Field_Init_Node(Node):
+    field : str
+    value : Expr_Node
+
+@dataclass
+class Struct_Literal_Node(Expr_Node):
+    struct_name : str
+    fields : List[Field_Init_Node]
