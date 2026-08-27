@@ -182,6 +182,15 @@ class HIRBorrow(HIRExpr):
 class HIRDrop(HIRStmt):
     target : str
 
+@dataclass
+class HIRAlloc(HIRExpr):
+    type_name : str
+    count : HIRExpr
+
+@dataclass
+class HIRFree(HIRStmt):
+    target : HIRExpr
+
 
 
 

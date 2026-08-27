@@ -14,7 +14,7 @@ from ir import (
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
     HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
     HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref,
-    HIRTrap, HIRRaise, HIRBorrow, HIRDrop
+    HIRTrap, HIRRaise, HIRBorrow, HIRDrop, HIRAlloc, HIRFree
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -116,6 +116,8 @@ def lower_stmt(stmt):
     elif name == "Drop_Node":
         t_name = stmt.target if isinstance(stmt.target, str) else getattr(stmt.target, "ident", str(stmt.target))
         return HIRDrop(target=t_name)
+    elif name == "Free_Node":
+        return HIRFree(target=lower_expr(stmt.target))
     return stmt
     
 
@@ -174,6 +176,9 @@ def lower_expr(expr):
         return HIRArgument(name=expr.name, value=None)
     elif name == "Borrow_Node":
         return HIRBorrow(target=lower_expr(expr.target), is_rw=getattr(expr, "is_rw", False))
+    elif name == "Alloc_Node":
+        t_name = getattr(expr.type, "name", str(expr.type)) if hasattr(expr, "type") else "int"
+        return HIRAlloc(type_name=t_name, count=lower_expr(expr.count))
     return expr
 
 def run_pipeline(code_str: str, file_name: str) -> subprocess.CompletedProcess:

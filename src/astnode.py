@@ -199,3 +199,12 @@ class Drop_Node(Stmt_Node):
 class Borrow_Node(Stmt_Node):
     target : Expr_Node
     is_rw : bool = False
+
+@dataclass
+class Alloc_Node(Expr_Node):
+    type : Type_Node
+    count : Expr_Node
+
+@dataclass
+class Free_Node(Stmt_Node):
+    target : Expr_Node

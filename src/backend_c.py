@@ -38,6 +38,8 @@ from ir import (
     HIRRaise,
     HIRBorrow,
     HIRDrop,
+    HIRAlloc,
+    HIRFree,
 )
 
 TYPE_MAP = {
@@ -348,6 +350,10 @@ class Codegenerate:
         elif isinstance(node, HIRDrop):
             self.emit_line(f"/* drop {node.target} */")
 
+        elif isinstance(node, HIRFree):
+            target_str = self.emit_expr(node.target)
+            self.emit_line(f"free({target_str});")
+
     
 
     def emit_expr(self, node) -> str:
@@ -415,6 +421,11 @@ class Codegenerate:
         elif isinstance(node, HIRBorrow):
             target = self.emit_expr(node.target)
             return f"&{target}"
+
+        elif isinstance(node, HIRAlloc):
+            ct = c_type(node.type_name)
+            cnt = self.emit_expr(node.count)
+            return f"({ct} *)malloc(sizeof({ct}) * ({cnt}))"
 
 
         return ""

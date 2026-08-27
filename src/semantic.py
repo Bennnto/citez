@@ -17,7 +17,8 @@ from astnode import (
     Pointer_Type_Node, Address_Node,
     Deref_Node, Trap_Node,
     Raise_Node, Borrow_Node,
-    Drop_Node,
+    Drop_Node, Alloc_Node,
+    Free_Node
 )
 from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol, SymbolState
 
@@ -202,13 +203,22 @@ class Analyzer:
         return node.inferred_type      
 
     def visit_Index_Node(self, node: Index_Node):
-        target_type = self.current_scope.resolve(node.target).type_kind if isinstance(node.target, str) else self.visit(node.target)
+        if isinstance(node.target, str):
+            target_symbol = self.current_scope.resolve(node.target)
+            if target_symbol.state == SymbolState.DROPPED:
+                raise SemanticError(f"Use of dropped variable '{target_symbol.name}'")
+            target_type = target_symbol.type_kind
+        else:
+            target_type = self.visit(node.target)
+
         index_type = self.visit(node.index)
 
         if index_type not in INT_TYPES:
             raise SemanticError(f"Array index must be integer, got '{index_type}'")
 
-        node.inferred_type = target_type
+        element_type = target_type.base_type if isinstance(target_type, PointerType) else target_type
+        node.inferred_type = element_type
+        return node.inferred_type
         return node.inferred_type 
 
     def visit_Call_Node(self, node: Call_Node):
@@ -474,4 +484,21 @@ class Analyzer:
         if symbol.ro_borrow_count > 0 or symbol.rw_claimed:
             raise SemanticError(f"Cannot drop '{symbol.name}' while active borrows exists")
         symbol.state = SymbolState.DROPPED
+
+    def visit_Alloc_Node(self, node: Alloc_Node):
+        count_type = self.visit(node.count)
+        if count_type not in INT_TYPES:
+            raise SemanticError(f"Alloc count must be integer, got '{count_type}'")
+        element_type = self.resolve_type(node.type)
+        node.inferred_type = PointerType(base_type=element_type)
+        return node.inferred_type
+
+    def visit_Free_Node(self, node: Free_Node):
+        target_type = self.visit(node.target)
+        target_name = node.target.ident if isinstance(node.target, Ident_Node) else None
+        if target_name:
+            symbol = self.current_scope.resolve(target_name)
+            if symbol.state == SymbolState.DROPPED:
+                raise SemanticError(f"Variable '{symbol.name}' was already freed/dropped")
+            symbol.state = SymbolState.DROPPED
     

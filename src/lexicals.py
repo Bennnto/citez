@@ -30,7 +30,7 @@ tokens = (
     'ASSIGN', 'SET', 'VAR', 'TRUE', 'FALSE', 'NEWLINE', 'IF', 'ELSE', 'WHILE', 'CONTINUE', 
     'BREAK', 'PROCEDURE', 'FOR', 'IN', 'RETURN', 'ONSCREEN', 'SCAN', 'ARRAY', 'PASS', 
     'STRUCT', 'ADDRESS', 'TRAP', 'CATCH', 'ALWAYS', 'RAISE', 'BORROW_RW', 'BORROW_RO', 
-    'DROP',
+    'DROP', 'ALLOC', 'FREE',
 )
 
 reserved = {
@@ -77,6 +77,8 @@ reserved = {
     'drop' : 'DROP',
     'ro' : 'BORROW_RO',
     'rw' : 'BORROW_RW',
+    'alloc' : 'ALLOC',
+    'free' : 'FREE',
 }
 
 

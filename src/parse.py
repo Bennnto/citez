@@ -39,6 +39,8 @@ from astnode import (
     Raise_Node,
     Borrow_Node,
     Drop_Node,
+    Alloc_Node,
+    Free_Node,
 )
 from dataclasses import asdict
 import json
@@ -81,7 +83,8 @@ def p_statement(p):
     | struct_decl_stmt
     | trap_stmt
     | raise_stmt
-    | drop_stmt"""
+    | drop_stmt
+    | free_stmt"""
 
     p[0] = p[1]
 
@@ -501,6 +504,21 @@ def p_expression_borrow(p):
 def p_drop_stmt(p):
     """drop_stmt : DROP IDENT optional_semicolon"""
     p[0] = Drop_Node(target=p[2])
+
+
+# Alloc & Free
+def p_expression_alloc(p):
+    """expression : ALLOC LPAREN type COMMA expression RPAREN"""
+    p[0] = Alloc_Node(type=p[3], count=p[5])
+
+
+def p_free_stmt(p):
+    """free_stmt : FREE LPAREN expression RPAREN optional_semicolon
+    | FREE expression optional_semicolon"""
+    if len(p) == 6:
+        p[0] = Free_Node(target=p[3])
+    else:
+        p[0] = Free_Node(target=p[2])
 
 
 # Helper
