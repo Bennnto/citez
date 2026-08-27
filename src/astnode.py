@@ -185,6 +185,7 @@ class Trap_Node(Stmt_Node):
 class Raise_Node(Stmt_Node):
     expr : Optional[Expr_Node] = None
 
+
 @dataclass
 class Borrow_Type_Node(Stmt_Node):
     base_type : Type_Node
@@ -193,8 +194,8 @@ class Borrow_Type_Node(Stmt_Node):
 @dataclass
 class Drop_Node(Stmt_Node):
     target : str
-
+    
 @dataclass 
-class Borrow_Node(Expr_Node):
+class Borrow_Node(Stmt_Node):
     target : Expr_Node
     is_rw : bool = False

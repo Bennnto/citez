@@ -47,9 +47,8 @@ TYPE_NAME_MAP = {
     'f64': TypeKind.F64,
     'void': TypeKind.VOID,
 }
-    
 
-class SymbolState(Enum):
+class SymbolState(Enum) :
     ACTIVE = auto()
     BORROWED_RO = auto()
     BORROWED_RW = auto()
@@ -63,8 +62,8 @@ class Symbol:
     storage: Storage = Storage.STACK
     
     state: SymbolState = SymbolState.ACTIVE
-    ro_borrow_count: int = 0
-    rw_claimed: bool = False
+    ro_borrow_count :int = 0
+    rw_claimed :bool = False
 
     scope_depth: int = 0
     stack_offset: int | None = None
