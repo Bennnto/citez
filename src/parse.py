@@ -43,6 +43,8 @@ from astnode import (
     Free_Node,
     Field_Init_Node,
     Struct_Literal_Node,
+    Extension_Node,
+    Spec_Decl_Node,
 )
 from dataclasses import asdict
 import json
@@ -50,13 +52,16 @@ import json
 precedence = (
     ("left", "OR"),
     ("left", "AND"),
-    ("left", "XOR"),
+    ("left", "BIT_OR"),
+    ("left", "BIT_XOR"),
+    ("left", "BIT_AND"),
     ("left", "NE", "EQ"),
-    ("left", "GT", "LT", "GE", "LE"),
+    ("left", "GT", "LT", "GE", "LE", "LSHIFT", "RSHIFT"),
     ("left", "ADD", "SUB"),
     ("left", "MUL", "DIV", "MOD"),
     ("right", "POW"),
-    ("right", "NOT", "UMINUS"),
+    ("right", "NOT", "BIT_NOT", "UMINUS"),
+    ("left", "DOT", "ARROW"),
 )
 
 # Program, Statement and Expression
@@ -86,14 +91,16 @@ def p_statement(p):
     | trap_stmt
     | raise_stmt
     | drop_stmt
-    | free_stmt"""
+    | free_stmt
+    | spec_stmt
+    | ext_stmt"""
 
     p[0] = p[1]
 
 
 def p_statements(p):
     """statements : statement
-    | statements statement"""
+                  | statements statement"""
     if len(p) == 3:
         p[0] = p[1] + [p[2]]
     else:
@@ -202,6 +209,11 @@ def p_expression_binary(p):
     | expression AND expression
     | expression OR  expression
     | expression XOR expression
+    | expression BIT_AND expression
+    | expression BIT_OR expression
+    | expression BIT_XOR expression
+    | expression LSHIFT expression
+    | expression RSHIFT expression
     | expression NE expression
     | expression EQ expression
     | expression GT expression
@@ -216,15 +228,18 @@ def p_expression_binary(p):
 
 def p_expression_unary(p):
     """expression : NOT expression
+    | BIT_NOT expression %prec BIT_NOT
     | SUB expression %prec UMINUS
     | ADDRESS expression
     | MUL expression"""
-    if p[1] == '&':
+    if p[1] == '~':
+        p[0] = Unaryops_Node(ops=p[1], operand=p[2])
+    elif p[1] == '&':
         p[0] = Address_Node(target=p[2])
     elif p[1] == '*':
         p[0] = Deref_Node(target=p[2])
-    else :
-        p[0] = Unaryops_Node(operand=p[2], ops=p[1])
+    else:
+        p[0] = Unaryops_Node(ops=p[1], operand=p[2])
 
 
 # If_Else
@@ -548,7 +563,19 @@ def p_free_stmt(p):
     else:
         p[0] = Free_Node(target=p[2])
 
+# Extension
+def p_extension_stmt(p):
+    """ext_stmt : EXTENSION IDENT LBRACE statements RBRACE
+                | EXTENSION IDENT SPEC IDENT LBRACE statements RBRACE"""
+    if len(p) == 6:
+        p[0] = Extension_Node(ident=p[2], method=p[4], for_spec=None)
+    else:
+        p[0] = Extension_Node(ident=p[2], method=p[6], for_spec=p[4])
 
+
+def p_spec_stmt(p):
+    """spec_stmt : SPEC IDENT LBRACE statements RBRACE"""
+    p[0] = Spec_Decl_Node(ident=p[2], methods=p[4])
 # Helper
 def p_optional_semicolon(p):
     """optional_semicolon : SEMICOLON
@@ -573,7 +600,11 @@ parser = yacc.yacc()
 if __name__ == "__main__":
     lexer = lexer
     data = """
-    var [i32, 5] numarray = [1, 2, 3, 4, 5]
+        ext Circle {
+            proc area(self: self): u32 {
+                return 2 * 3.1415
+            }
+        }
     """
     result = parser.parse(data, lexer=lexer)
     print(json.dumps(asdict(result), indent=2))

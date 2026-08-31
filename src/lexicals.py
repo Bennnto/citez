@@ -25,12 +25,13 @@ tokens = (
     # Operators
     'ADD', 'SUB', 'MUL', 'DIV', 'MOD', 'POW', 'AND', 'OR', 'XOR', 'NOT',
     'NE', 'EQ', 'LE', 'GE', 'LT', 'GT', 'UMINUS',
+    'BIT_AND', 'BIT_OR', 'BIT_XOR', 'BIT_NOT', 'LSHIFT', 'RSHIFT',
     
     # Keywords
     'ASSIGN', 'SET', 'VAR', 'TRUE', 'FALSE', 'NEWLINE', 'IF', 'ELSE', 'WHILE', 'CONTINUE', 
     'BREAK', 'PROCEDURE', 'FOR', 'IN', 'RETURN', 'ONSCREEN', 'SCAN', 'ARRAY', 'PASS', 
     'STRUCT', 'ADDRESS', 'TRAP', 'CATCH', 'ALWAYS', 'RAISE', 'BORROW_RW', 'BORROW_RO', 
-    'DROP', 'ALLOC', 'FREE',
+    'DROP', 'ALLOC', 'FREE', 'EXTENSION', 'SPEC',
 )
 
 reserved = {
@@ -79,6 +80,9 @@ reserved = {
     'rw' : 'BORROW_RW',
     'alloc' : 'ALLOC',
     'free' : 'FREE',
+    'ext' : 'EXTENSION',
+    'spec' : 'SPEC',
+
 }
 
 
@@ -96,7 +100,6 @@ t_RBRACKET = r'\]'
 t_COMMA = r','
 
 t_POW = r'\*\*'
-t_ARROW = r'->'
 t_ADD = r'\+'
 t_SUB = r'-'
 t_MUL = r'\*'
@@ -104,7 +107,12 @@ t_DIV = r'\/'
 t_MOD = r'%'
 t_AND = r'\&\&'
 t_OR = r'\|\|'
-t_XOR = r'\^'
+t_LSHIFT = r'<<'
+t_RSHIFT = r'>>'
+t_BIT_NOT = r'~'
+t_BIT_AND = r'\&'
+t_BIT_OR = r'\|'
+t_BIT_XOR = r'\^'
 t_NOT = r'!'
 t_NE = r'!='
 t_EQ = r'=='
@@ -114,6 +122,7 @@ t_LT = r'<'
 t_ASSIGN = r'='
 t_GT = r'>'
 t_DOT = r'\.'
+t_ARROW = r'->'
 t_ADDRESS = r'\&'
 
 

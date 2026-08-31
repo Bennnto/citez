@@ -219,3 +219,14 @@ class Field_Init_Node(Node):
 class Struct_Literal_Node(Expr_Node):
     struct_name : str
     fields : List[Field_Init_Node]
+
+@dataclass
+class Extension_Node(Stmt_Node):
+    ident : str
+    method : List[Stmt_Node]
+    for_spec : Optional[str] = None
+
+@dataclass
+class Spec_Decl_Node(Stmt_Node):
+    ident : str
+    methods : List[Stmt_Node]

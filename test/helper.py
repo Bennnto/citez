@@ -14,7 +14,7 @@ from ir import (
     HIRIf, HIRWhile, HIRFor, HIRProcedure, HIRReturn, HIRBreak, HIRContinue,
     HIROnscreen, HIRScan, HIRArraydecl, HIRArrayliteral, HIRIndex, HIRCall, HIRArgument, HIRPass,
     HIRStructdecl, HIRField, HIRStructaccess, HIRAddress, HIRPointertype, HIRDeref,
-    HIRTrap, HIRRaise, HIRBorrow, HIRDrop, HIRAlloc, HIRFree, HIRFieldInit, HIRStructLiteral
+    HIRTrap, HIRRaise, HIRBorrow, HIRDrop, HIRAlloc, HIRFree, HIRFieldInit, HIRStructLiteral, HIRUnary
 )
 
 def lower_to_hir(ast) -> HIRProgram:
@@ -177,6 +177,8 @@ def lower_expr(expr):
         if expr.value is not None:
             return HIRArgument(name=expr.name, value=lower_expr(expr.value))
         return HIRArgument(name=expr.name, value=None)
+    elif name == "Unaryops_Node":
+        return HIRUnary(ops=expr.ops, expr=lower_expr(expr.operand))
     elif name == "Borrow_Node":
         return HIRBorrow(target=lower_expr(expr.target), is_rw=getattr(expr, "is_rw", False))
     elif name == "Alloc_Node":

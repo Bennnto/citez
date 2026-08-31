@@ -42,6 +42,8 @@ from ir import (
     HIRFree,
     HIRFieldInit,
     HIRStructLiteral,
+    HIRExtend,
+    HIRSpec,
 )
 
 TYPE_MAP = {
@@ -87,7 +89,7 @@ class Codegenerate:
     def escape_string(self, s: str) -> str:
         return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\t', '\\t')
         
-    def generate(self, program: HIRProgram):
+    def generate(self, program):
         self.emit_header()
         self.emit_line()
         
@@ -96,7 +98,7 @@ class Codegenerate:
         
         if getattr(program, "statements", None):
             for stmt in program.statements:
-                if isinstance(stmt, HIRProcedure):
+                if type(stmt).__name__ in ("HIRProcedure", "Procedure_Node", "HIRStructdecl", "Struct_Decl_Node", "HIRExtend", "Extension_Node", "HIRSpec", "Spec_Decl_Node"):
                     fn_stmts.append(stmt)
                 else:
                     main_stmts.append(stmt)
@@ -250,6 +252,7 @@ class Codegenerate:
                 self.emit_stmt(node.body)
             self.indent -= 1 
             self.emit_line("}")
+
             
     
         elif isinstance(node, HIRBreak):
@@ -356,6 +359,41 @@ class Codegenerate:
             target_str = self.emit_expr(node.target)
             self.emit_line(f"free({target_str});")
 
+        elif isinstance(node, HIRExtend):
+            struct_name = self.emit_expr(node.ident) if isinstance(node.ident, HIRNode) else str(node.ident)
+            methods = getattr(node, "method", getattr(node, "body", []))
+            
+            for stmt in methods:
+                if isinstance(stmt, HIRProcedure):
+                    # 1. Prefix function name (e.g. "Circle_area")
+                    if not stmt.ident.startswith(f"{struct_name}_"):
+                        stmt.ident = f"{struct_name}_{stmt.ident}"
+
+                    # 2. Update 'self' parameter type to struct pointer (e.g. "Circle*")
+                    if stmt.param:
+                        for p in stmt.param:
+                            if getattr(p, "name", None) == "self":
+                                p.type_name = f"{struct_name}*"
+
+                    # 3. Let emit_stmt render the procedure automatically!
+                    self.emit_stmt(stmt)
+                    self.emit_line()
+
+        elif isinstance(node, HIRSpec):
+            spec_name = node.ident
+            method = getattr(node, "method", getattr(node, "methods", getattr(node, "body", [])))
+            self.emit_line(f"/* spec interface: {spec_name} */")
+            if methods :
+                for met in methods :
+                    if hasattr(met, "ident"):
+                        self.emit_line(f"/* method signature: {spec_name}_{met.ident} */")
+                    
+
+        
+
+    
+
+
     
 
     def emit_expr(self, node) -> str:
@@ -435,6 +473,11 @@ class Codegenerate:
             cnt = self.emit_expr(node.count)
             return f"({ct} *)malloc(sizeof({ct}) * ({cnt}))"
 
+
+        elif type(node).__name__ in ("Unaryops_Node", "HIRUnary"):
+            op = getattr(node, "ops", "-")
+            operand = self.emit_expr(getattr(node, "operand", getattr(node, "expr", "")))
+            return f"({op}{operand})"
 
         return ""
     

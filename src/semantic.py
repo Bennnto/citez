@@ -1,3 +1,4 @@
+from json import encoder
 from dataclasses import dataclass
 from astnode import ( 
     Type_Node, Assign_Node,
@@ -19,7 +20,8 @@ from astnode import (
     Raise_Node, Borrow_Node,
     Drop_Node, Alloc_Node,
     Free_Node, Field_Init_Node,
-    Struct_Literal_Node
+    Struct_Literal_Node, Extension_Node,
+    Spec_Decl_Node
 )
 from symbol import Scope, TYPE_NAME_MAP as Type_Name_Map, Symbol, SymbolState
 
@@ -110,13 +112,21 @@ class Analyzer:
             return PointerType(base_type=self.resolve_type(node.base_type))
         type_name = node.name.lower() if hasattr(node, "name") else str(node).lower()
         
+        if type_name == "self":
+            if getattr(self, "current_struct", None):
+                return self.current_struct.name
+            return "self"
+
         if type_name in Type_Name_Map:
             return Type_Name_Map[type_name]
 
         # Check if it's a user declared struct in current scope 
-        symbol = self.current_scope.resolve(node.name if hasattr(node, "name") else str(node))
-        if symbol and (getattr(symbol, 'type_kind', None) == "struct" or getattr(symbol, 'kind', None) == "struct"):
-            return symbol.name
+        try:
+            symbol = self.current_scope.resolve(node.name if hasattr(node, "name") else str(node))
+            if symbol and (getattr(symbol, 'type_kind', None) in ("struct", "spec") or getattr(symbol, 'kind', None) in ("struct", "spec")):
+                return symbol.name
+        except NameError:
+            pass
         
         raise SemanticError(f"Unknown type '{node.name if hasattr(node, 'name') else node}'")
 
@@ -271,6 +281,12 @@ class Analyzer:
                 return node.inferred_type
             raise SemanticError(f"Operator '{op}' requires numeric operands, got {left} and {right}")
 
+        if op in {"&", "|", "^", "<<", ">>"}:
+            if left in INT_TYPES and right in INT_TYPES:
+                node.inferred_type = left
+                return node.inferred_type
+            raise SemanticError(f"Bitwise operator '{op}' requires integer operands, got {left} and {right}")
+
         if op in {"&&", "||"}:
             if left == bool_type and right == bool_type:
                 node.inferred_type = bool_type
@@ -283,10 +299,13 @@ class Analyzer:
         operand_type = self.visit(node.operand)
         op = node.ops
         
-        if op == "!" and operand_type == Type_Name_Map["bool"]:
+        if op == "~" and operand_type in INT_TYPES:
+            node.inferred_type = operand_type
+            return node.inferred_type
+        elif op == "!" and operand_type == Type_Name_Map["bool"]:
             node.inferred_type = Type_Name_Map["bool"]
             return node.inferred_type
-        elif op == "-" and operand_type in {Type_Name_Map["int"], Type_Name_Map["float"]}:
+        elif op == "-" and operand_type in NUMERIC_TYPES:
             node.inferred_type = operand_type
             return node.inferred_type
     
@@ -351,7 +370,7 @@ class Analyzer:
     def visit_Return_Node(self, node: Return_Node):
         ret_type = self.visit(node.value) if node.value is not None else Type_Name_Map["void"]
         expected_type = getattr(self, "current_fn_type", Type_Name_Map["void"])
-        if ret_type != expected_type:
+        if not self.is_assignable(expected_type, ret_type):
             raise SemanticError(f"Return type mismatch: expected '{expected_type}' got '{ret_type}'") 
                
     def visit_Onscreen_Node(self, node: Onscreen_Node):
@@ -524,3 +543,54 @@ class Analyzer:
                 raise SemanticError(f"Variable '{symbol.name}' was already freed/dropped")
             symbol.state = SymbolState.DROPPED
     
+
+    def visit_Extension_Node(self, node: Extension_Node):
+        try:
+            struct_symbol = self.current_scope.resolve(node.ident)
+        except NameError:
+            raise SemanticError(f"Struct '{node.ident}' is not declared")
+
+        if getattr(struct_symbol, "type_kind", None) != "struct":
+            raise SemanticError(f"Type '{node.ident}' is not a struct and cannot be extended")
+
+        if not hasattr(struct_symbol, "methods"):
+            struct_symbol.methods = {}
+
+        # If implementing a spec (e.g. ext Circle spec Shape)
+        if getattr(node, "for_spec", None):
+            try:
+                spec_symbol = self.current_scope.resolve(node.for_spec)
+            except NameError:
+                raise SemanticError(f"Spec '{node.for_spec}' is not declared")
+
+            if hasattr(spec_symbol, "methods"):
+                methods_list = getattr(node, "method", getattr(node, "body", []))
+                impl_methods = {stmt.ident for stmt in methods_list if hasattr(stmt, "ident")}
+                for req_method in spec_symbol.methods:
+                    if req_method not in impl_methods:
+                        raise SemanticError(
+                            f"Struct '{node.ident}' missing method '{req_method}' required by spec '{node.for_spec}'"
+                        )
+
+        # 1. Set current struct context for "self" resolution
+        old_struct = getattr(self, "current_struct", None)
+        self.current_struct = struct_symbol
+        try:
+            methods_list = getattr(node, "method", getattr(node, "body", []))
+            if methods_list:
+                for stmt in methods_list:
+                    if isinstance(stmt, Procedure_Node):
+                        struct_symbol.methods[stmt.ident] = stmt
+                    self.visit(stmt)
+        finally:
+            self.current_struct = old_struct
+
+    def visit_Spec_Decl_Node(self, node: Spec_Decl_Node):
+        name = node.ident
+        spec_symbol = self.current_scope.declare(name, "spec")
+        spec_symbol.methods = {}
+        if node.methods:
+            for met in node.methods:
+                if isinstance(met, Procedure_Node):
+                    spec_symbol.methods[met.ident] = met
+                             

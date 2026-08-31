@@ -202,7 +202,19 @@ class HIRAlloc(HIRExpr):
 class HIRFree(HIRStmt):
     target : HIRExpr
 
+@dataclass
+class HIRExtend(HIRStmt):
+    ident : str
+    body : list[HIRStmt]
+    for_method : Optional[HIRStmt]
 
+@dataclass
+class HIRSpec(HIRStmt):
+    ident : str
+    method : list[HIRStmt]
 
-
+@dataclass
+class HIRUnary(HIRExpr):
+    ops : str
+    expr : HIRExpr
     
