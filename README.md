@@ -1,4 +1,4 @@
-# Citez Programming Language & Compiler
+citez (Archived)
 
 A lightweight compiler built in Python targeting C code generation.
 
